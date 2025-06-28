@@ -6,6 +6,7 @@ import '../../controller/UserController.dart';
 import 'terms_conditions_page.dart';
 import 'privacy_policy_page.dart';
 import 'edit_profile_screen.dart';
+import 'help_support_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -77,7 +78,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 _loadLocationFromPrefs();
               }
             },
-            icon: const Icon(LineIcons.cog),
+            icon: const Icon(LineIcons.pen),
           ),
         ],
       ),
@@ -207,6 +208,13 @@ class _SettingsPageState extends State<SettingsPage> {
               context,
               MaterialPageRoute(
                 builder: (context) => const PrivacyPolicyPage(),
+              ),
+            );
+          } else if (title == 'Help & Support') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const HelpSupportPage(),
               ),
             );
           } else {

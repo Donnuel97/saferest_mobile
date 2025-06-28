@@ -2,10 +2,12 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/notification_service.dart';
 
 class FriendController {
   static const String _baseUrl = "https://saferestapi-h6p5.onrender.com";
   static const Duration _timeout = Duration(seconds: 30);
+  static final NotificationService _notificationService = NotificationService();
 
   // Cache token to avoid multiple SharedPreferences calls
   static String? _cachedToken;
@@ -120,7 +122,25 @@ class FriendController {
   static Future<List<Map<String, dynamic>>> fetchFriendRequests() async {
     try {
       final response = await _makeRequest('GET', '/friend_requests/');
-      return await _parseListResponse(response, 'fetch friend requests');
+      final requests = await _parseListResponse(response, 'fetch friend requests');
+      
+      // Show notifications for new friend requests
+      for (final request in requests) {
+        if (request['is_new'] == true) {
+          final name = "${request['first_name']} ${request['last_name']}";
+          await _notificationService.showFriendRequestNotification(
+            title: 'New Friend Request',
+            body: '$name sent you a friend request',
+            payload: jsonEncode({
+              'type': 'friend_request',
+              'id': request['id'],
+              'name': name,
+            }),
+          );
+        }
+      }
+      
+      return requests;
     } catch (e) {
       debugPrint("❌ Error fetching friend requests: $e");
       return [];
@@ -136,7 +156,21 @@ class FriendController {
 
     try {
       final response = await _makeRequest('POST', '/friend_requests/$id/accept/');
-      return await _parseBoolResponse(response, 'accept friend request');
+      final success = await _parseBoolResponse(response, 'accept friend request');
+      
+      if (success) {
+        // Show notification for accepted request
+        await _notificationService.showFriendRequestNotification(
+          title: 'Friend Request Accepted',
+          body: 'You are now friends',
+          payload: jsonEncode({
+            'type': 'friend_request_accepted',
+            'id': id,
+          }),
+        );
+      }
+      
+      return success;
     } catch (e) {
       debugPrint("❌ Error accepting friend request: $e");
       return false;
@@ -168,9 +202,100 @@ class FriendController {
 
     try {
       final response = await _makeRequest('POST', '/friend_requests/$id/send/');
-      return await _parseBoolResponse(response, 'send friend request');
+      final success = await _parseBoolResponse(response, 'send friend request');
+      
+      if (success) {
+        // Show notification for sent request
+        await _notificationService.showFriendRequestNotification(
+          title: 'Friend Request Sent',
+          body: 'Your friend request has been sent',
+          payload: jsonEncode({
+            'type': 'friend_request_sent',
+            'id': id,
+          }),
+        );
+      }
+      
+      return success;
     } catch (e) {
       debugPrint("❌ Error sending friend request: $e");
+      return false;
+    }
+  }
+
+  /// Send a watcher request
+  static Future<bool> sendWatcherRequest(String tripId, String userId) async {
+    if (tripId.isEmpty || userId.isEmpty) {
+      debugPrint("❌ Invalid trip or user ID");
+      return false;
+    }
+
+    try {
+      final response = await _makeRequest('POST', '/trips/$tripId/watchers/$userId/');
+      final success = await _parseBoolResponse(response, 'send watcher request');
+      
+      if (success) {
+        // Show notification for watcher request
+        await _notificationService.showWatcherNotification(
+          title: 'Watcher Request Sent',
+          body: 'You have been invited to watch a trip',
+          payload: jsonEncode({
+            'type': 'watcher_request',
+            'trip_id': tripId,
+            'user_id': userId,
+          }),
+        );
+      }
+      
+      return success;
+    } catch (e) {
+      debugPrint("❌ Error sending watcher request: $e");
+      return false;
+    }
+  }
+
+  /// Accept a watcher request
+  static Future<bool> acceptWatcherRequest(String tripId) async {
+    if (tripId.isEmpty) {
+      debugPrint("❌ Invalid trip ID");
+      return false;
+    }
+
+    try {
+      final response = await _makeRequest('POST', '/trips/$tripId/watchers/accept/');
+      final success = await _parseBoolResponse(response, 'accept watcher request');
+      
+      if (success) {
+        // Show notification for accepted watcher request
+        await _notificationService.showWatcherNotification(
+          title: 'Watcher Request Accepted',
+          body: 'You are now watching this trip',
+          payload: jsonEncode({
+            'type': 'watcher_request_accepted',
+            'trip_id': tripId,
+          }),
+        );
+      }
+      
+      return success;
+    } catch (e) {
+      debugPrint("❌ Error accepting watcher request: $e");
+      return false;
+    }
+  }
+
+  /// Decline a watcher request
+  static Future<bool> declineWatcherRequest(String tripId) async {
+    if (tripId.isEmpty) {
+      debugPrint("❌ Invalid trip ID");
+      return false;
+    }
+
+    try {
+      final response = await _makeRequest('POST', '/trips/$tripId/watchers/decline/');
+      return await _parseBoolResponse(response, 'decline watcher request');
+    } catch (e) {
+      debugPrint("❌ Error declining watcher request: $e");
       return false;
     }
   }

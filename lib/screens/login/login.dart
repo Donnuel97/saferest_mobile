@@ -1,3 +1,5 @@
+
+import 'package:flutter/material.dart'; import 'package:email_validator/email_validator.dart'; import 'package:lottie/lottie.dart'; import 'package:line_icons/line_icons.dart'; import 'package:flutter/gestures.dart'; import 'package:saferest_mobile/controller/LoginController.dart'; // Import control
 import 'package:flutter/material.dart';
 import 'package:email_validator/email_validator.dart';
 import 'package:lottie/lottie.dart';
@@ -50,28 +52,44 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         _isLoading = true;
       });
 
-      final String email = _emailController.text.trim();
-      final String password = _passwordController.text;
+      try {
+        final String email = _emailController.text.trim();
+        final String password = _passwordController.text;
 
-      final result = await LoginController.loginUser(email, password);
+        final result = await LoginController.loginUser(email, password);
 
-      setState(() {
-        _isLoading = false;
-      });
+        print('Debug - Full response: $result'); // Debug print
 
-      if (!mounted) return;
+        if (!mounted) return;
 
-      if (result['success'] == true) {
-        Navigator.pushReplacementNamed(context, Routes.dashboard);
-      } else {
-        // Show a more informative message for server unavailability
-        if (result['isServerDown'] == true) {
+        // Check if response has access token and account status is active
+        if (result['access'] != null && result['account_status'] == 'active') {
+          Navigator.pushReplacementNamed(context, Routes.dashboard);
+        } else if (result['access'] != null) {
+          // Login successful but account not active
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => AlertDialog(
+              title: const Text('Account Not Active'),
+              content: Text(
+                'Your account status is "${result['account_status']}". Please contact support for assistance.'
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        } else if (result['isServerDown'] == true) {
           showDialog(
             context: context,
             builder: (context) => AlertDialog(
               title: const Text('Server Temporarily Unavailable'),
               content: const Text(
-                'The server is currently starting up. This may take a few moments as we use a free hosting service. Please try again in about 30 seconds.'
+                'The server is currently starting up. Please try again in a few moments.'
               ),
               actions: [
                 TextButton(
@@ -84,12 +102,16 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result['message']),
+              content: Text(result['message'] ?? 'Login failed'),
               backgroundColor: Colors.redAccent,
               behavior: SnackBarBehavior.floating,
             ),
           );
         }
+      } finally {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }

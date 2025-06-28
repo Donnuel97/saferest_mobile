@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:saferest_mobile/utils/routes.dart'; // Import the routes
+import 'package:saferest_mobile/services/notification_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize notification service
+  final notificationService = NotificationService();
+  await notificationService.initialize();
+  await notificationService.requestPermission();
+  
   runApp(const MyApp());
 }
 
@@ -11,7 +19,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Saferest',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),

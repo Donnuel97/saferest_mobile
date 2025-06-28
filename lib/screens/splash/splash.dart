@@ -17,9 +17,11 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _fadeController;
   late AnimationController _scaleController;
   late AnimationController _slideController;
+  late AnimationController _rotateController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
   late Animation<Offset> _slideAnimation;
+  late Animation<double> _rotateAnimation;
 
   @override
   void initState() {
@@ -52,6 +54,11 @@ class _SplashScreenState extends State<SplashScreen>
       vsync: this,
     );
 
+    _rotateController = AnimationController(
+      duration: const Duration(milliseconds: 3000),
+      vsync: this,
+    );
+
     // Initialize animations
     _fadeAnimation = Tween<double>(
       begin: 0.0,
@@ -77,11 +84,19 @@ class _SplashScreenState extends State<SplashScreen>
       curve: Curves.easeOutCubic,
     ));
 
+    _rotateAnimation = Tween<double>(
+      begin: 0.0,
+      end: 2.0,
+    ).animate(CurvedAnimation(
+      parent: _rotateController,
+      curve: Curves.easeInOut,
+    ));
+
     // Start animations
     _startAnimations();
 
     // Navigate after delay
-    _timer = Timer(const Duration(seconds: 20), () {
+    _timer = Timer(const Duration(seconds: 3), () {
       print('Timer completed, navigating to login');
       if (mounted) {
         _navigateToLogin();
@@ -105,6 +120,12 @@ class _SplashScreenState extends State<SplashScreen>
     Future.delayed(const Duration(milliseconds: 900), () {
       if (mounted) {
         _slideController.forward();
+      }
+    });
+
+    Future.delayed(const Duration(milliseconds: 1200), () {
+      if (mounted) {
+        _rotateController.repeat();
       }
     });
   }
@@ -139,6 +160,7 @@ class _SplashScreenState extends State<SplashScreen>
     _fadeController.dispose();
     _scaleController.dispose();
     _slideController.dispose();
+    _rotateController.dispose();
     super.dispose();
   }
 
@@ -223,48 +245,52 @@ class _SplashScreenState extends State<SplashScreen>
                     animation: Listenable.merge([
                       _fadeAnimation,
                       _scaleAnimation,
+                      _rotateAnimation,
                     ]),
                     builder: (context, child) {
                       return FadeTransition(
                         opacity: _fadeAnimation,
                         child: ScaleTransition(
                           scale: _scaleAnimation,
-                          child: Container(
-                            padding: const EdgeInsets.all(24),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white.withOpacity(0.15),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.3),
-                                width: 2,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 20,
-                                  spreadRadius: 5,
+                          child: RotationTransition(
+                            turns: _rotateAnimation,
+                            child: Container(
+                              padding: const EdgeInsets.all(24),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white.withOpacity(0.15),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.3),
+                                  width: 2,
                                 ),
-                              ],
-                            ),
-                            child: SvgPicture.asset(
-                              'assets/images/intro-icon.svg',
-                              width: 120,
-                              height: 120,
-                              colorFilter: const ColorFilter.mode(
-                                Colors.white,
-                                BlendMode.srcIn,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 20,
+                                    spreadRadius: 5,
+                                  ),
+                                ],
                               ),
-                              placeholderBuilder: (context) => Container(
+                              child: SvgPicture.asset(
+                                'assets/images/intro-icon.svg',
                                 width: 120,
                                 height: 120,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.white.withOpacity(0.2),
+                                colorFilter: const ColorFilter.mode(
+                                  Colors.white,
+                                  BlendMode.srcIn,
                                 ),
-                                child: const Icon(
-                                  Icons.directions_car_rounded,
-                                  size: 60,
-                                  color: Colors.white,
+                                placeholderBuilder: (context) => Container(
+                                  width: 120,
+                                  height: 120,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.white.withOpacity(0.2),
+                                  ),
+                                  child: const Icon(
+                                    Icons.directions_car_rounded,
+                                    size: 60,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
                             ),
@@ -319,62 +345,23 @@ class _SplashScreenState extends State<SplashScreen>
                   // Loading indicator
                   FadeTransition(
                     opacity: _fadeAnimation,
-                    child: Column(
-                      children: [
-                        SizedBox(
-                          width: 30,
-                          height: 30,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white.withOpacity(0.8),
-                            ),
-                          ),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                          width: 2,
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Preparing your experience...',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.white.withOpacity(0.7),
-                            fontWeight: FontWeight.w300,
-                          ),
-                        ),
-                      ],
+                      ),
+                      child: const CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        strokeWidth: 2,
+                      ),
                     ),
                   ),
                 ],
-              ),
-            ),
-
-            // Bottom branding
-            Positioned(
-              bottom: 40,
-              left: 0,
-              right: 0,
-              child: FadeTransition(
-                opacity: _fadeAnimation,
-                child: Column(
-                  children: [
-                    Text(
-                      'Version 1.0.0',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white.withOpacity(0.6),
-                        fontWeight: FontWeight.w300,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '© 2024 TripTracker',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white.withOpacity(0.6),
-                        fontWeight: FontWeight.w300,
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ),
           ],

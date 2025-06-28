@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../controller/create_trip.dart';
+import '../../../controller/friend_controller.dart';
 import '../../../utils/routes.dart';
 import 'map_location_picker.dart';
 
@@ -243,6 +244,38 @@ class _RoadTripFormState extends State<RoadTripForm> {
 // Set<int> _selectedFriendIds = <int>{};
 
   Future<void> _showFriendSelector() async {
+    List<Map<String, dynamic>> _searchResults = [];
+    bool _isSearching = false;
+    bool _isLoadingSearch = false;
+    final TextEditingController _searchController = TextEditingController();
+
+    void _onSearch(String query) async {
+      if (query.length < 2) return;
+
+      setState(() {
+        _isLoadingSearch = true;
+        _isSearching = true;
+      });
+
+      final results = await FriendController.searchUsers(query);
+
+      setState(() {
+        _searchResults = results;
+        _isLoadingSearch = false;
+      });
+    }
+
+    void _sendFriendRequest(String id, String name) async {
+      final success = await FriendController.sendFriendRequest(id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(success ? 'Friend request sent to $name' : 'Failed to send request to $name'),
+          backgroundColor: success ? Colors.green : Colors.red,
+        ),
+      );
+      _onSearch(_searchController.text);
+    }
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -254,215 +287,284 @@ class _RoadTripFormState extends State<RoadTripForm> {
               content: SizedBox(
                 width: double.maxFinite,
                 height: MediaQuery.of(context).size.height * 0.5,
-                child: FutureBuilder<Map<String, dynamic>>(
-                  future: LocationController.getFriends(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    if (snapshot.hasError) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                            const SizedBox(height: 16),
-                            Text('Error loading friends: ${snapshot.error}'),
-                            const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: () {
-                                setModalState(() {}); // Trigger rebuild to retry
-                              },
-                              child: const Text('Retry'),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    if (!snapshot.hasData) {
-                      return const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.warning_amber, size: 48, color: Colors.orange),
-                            SizedBox(height: 16),
-                            Text('No data received from server'),
-                          ],
-                        ),
-                      );
-                    }
-
-                    final data = snapshot.data!;
-                    List<dynamic> friendsList = [];
-
-                    // FIXED: Handle the direct list response from your API
-                    if (data is List) {
-                      friendsList = data as List;
-                    } else if (data['data'] != null && data['data'] is List) {
-                      friendsList = data['data'] as List;
-                    } else if (data['friends'] != null && data['friends'] is List) {
-                      friendsList = data['friends'] as List;
-                    } else if (data['results'] != null && data['results'] is List) {
-                      friendsList = data['results'] as List;
-                    } else {
-                      // Look for any List in the response
-                      for (final value in data.values) {
-                        if (value is List) {
-                          friendsList = value;
-                          break;
-                        }
-                      }
-                    }
-
-                    if (friendsList.isEmpty) {
-                      return const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.people_outline, size: 48, color: Colors.grey),
-                            SizedBox(height: 16),
-                            Text('No friends found'),
-                          ],
-                        ),
-                      );
-                    }
-
-                    _allFriends = List<Map<String, dynamic>>.from(friendsList);
-
-                    return Column(
-                      children: [
-                        // Select All/None buttons
-                        if (_allFriends.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 8.0),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                TextButton.icon(
+                child: Column(
+                  children: [
+                    // Search Bar
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12.0),
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: "Search for new friends...",
+                          prefixIcon: const Icon(Icons.search),
+                          filled: true,
+                          fillColor: Colors.grey[100],
+                          contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear),
                                   onPressed: () {
-                                    setModalState(() {
-                                      setState(() {
-                                        _selectedFriendIds.clear();
-                                        for (final friend in _allFriends) {
-                                          final friendId = _parseFriendId(friend['id']);
-                                          if (friendId != null) {
-                                            _selectedFriendIds.add(friendId);
-                                          }
-                                        }
-                                      });
+                                    _searchController.clear();
+                                    setState(() {
+                                      _isSearching = false;
+                                      _searchResults.clear();
                                     });
                                   },
-                                  icon: const Icon(Icons.select_all),
-                                  label: const Text('Select All'),
-                                ),
-                                TextButton.icon(
-                                  onPressed: () {
-                                    setModalState(() {
-                                      setState(() {
-                                        _selectedFriendIds.clear();
-                                      });
-                                    });
-                                  },
-                                  icon: const Icon(Icons.clear_all),
-                                  label: const Text('Clear All'),
-                                ),
-                              ],
-                            ),
-                          ),
+                                )
+                              : null,
+                        ),
+                        onChanged: (query) {
+                          if (query.length >= 2) {
+                            _onSearch(query);
+                          } else {
+                            setState(() {
+                              _isSearching = false;
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                    // Loading indicator for search
+                    if (_isLoadingSearch)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12.0),
+                        child: LinearProgressIndicator(),
+                      ),
+                    // Search Results or Friend List
+                    Expanded(
+                      child: _isSearching
+                          ? (_searchResults.isEmpty
+                              ? const Center(child: Text('No users found.'))
+                              : ListView.builder(
+                                  itemCount: _searchResults.length,
+                                  itemBuilder: (context, index) {
+                                    final user = _searchResults[index];
+                                    final name = "${user['first_name']} ${user['last_name']}";
+                                    final isFriend = user['is_friends'] == true;
 
-                        // Selection counter
-                        if (_selectedFriendIds.isNotEmpty)
-                          Container(
-                            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                            margin: const EdgeInsets.only(bottom: 8),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).primaryColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              '${_selectedFriendIds.length} friend${_selectedFriendIds.length == 1 ? '' : 's'} selected',
-                              style: TextStyle(
-                                color: Theme.of(context).primaryColor,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-
-                        // Friends list
-                        Expanded(
-                          child: ListView.builder(
-                            itemCount: _allFriends.length,
-                            itemBuilder: (context, index) {
-                              final friend = _allFriends[index];
-                              final friendId = _parseFriendId(friend['id']);
-
-                              if (friendId == null) {
-                                return const SizedBox.shrink();
-                              }
-
-                              final firstName = friend['first_name']?.toString() ?? '';
-                              final lastName = friend['last_name']?.toString() ?? '';
-                              final fullName = '$firstName $lastName'.trim();
-                              final avatarUrl = friend['avatar_url']?.toString();
-                              final isFriends = friend['is_friends'] ?? false;
-                              final isSelected = _selectedFriendIds.contains(friendId);
-
-                              return Card(
-                                margin: const EdgeInsets.symmetric(vertical: 2),
-                                child: CheckboxListTile(
-                                  title: Text(
-                                    fullName.isEmpty ? 'Unknown User' : fullName,
-                                    style: const TextStyle(fontWeight: FontWeight.w500),
-                                  ),
-                                  subtitle: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text('ID: ${friendId.length > 8 ? friendId.substring(0, 8) + '...' : friendId}'),
-                                      if (isFriends)
-                                        const Text(
-                                          'Friends ✓',
-                                          style: TextStyle(
-                                            color: Colors.green,
-                                            fontSize: 12,
+                                    return Container(
+                                      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(12),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.grey.withOpacity(0.05),
+                                            blurRadius: 2,
+                                            offset: const Offset(0, 1),
                                           ),
-                                        ),
-                                    ],
-                                  ),
-                                  secondary: CircleAvatar(
-                                    backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
-                                        ? NetworkImage(avatarUrl)
-                                        : null,
-                                    child: avatarUrl == null || avatarUrl.isEmpty
-                                        ? const Icon(Icons.person)
-                                        : null,
-                                  ),
-                                  value: isSelected,
-                                  onChanged: (bool? selected) {
-                                    setModalState(() {
-                                      setState(() {
-                                        if (selected == true) {
-                                          print('Adding friend ID: $friendId'); // Debug print
-                                          _selectedFriendIds.add(friendId);
-                                        } else {
-                                          print('Removing friend ID: $friendId'); // Debug print
-                                          _selectedFriendIds.remove(friendId);
-                                        }
-                                      });
-                                      print('Current selected friends: $_selectedFriendIds'); // Debug print
-                                    });
+                                        ],
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          CircleAvatar(
+                                            radius: 24,
+                                            backgroundImage: user['avatar_url'] != null && user['avatar_url'].toString().isNotEmpty
+                                                ? NetworkImage(user['avatar_url'])
+                                                : null,
+                                            child: (user['avatar_url'] == null || user['avatar_url'].toString().isEmpty)
+                                                ? const Icon(Icons.person, size: 28)
+                                                : null,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  isFriend ? 'Already friends' : 'Tap to add friend',
+                                                  style: TextStyle(
+                                                    color: isFriend ? Colors.grey : Colors.orange,
+                                                    fontSize: 13,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          if (!isFriend)
+                                            TextButton(
+                                              style: TextButton.styleFrom(
+                                                backgroundColor: const Color(0xFFFFF3E0),
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                              ),
+                                              onPressed: () => _sendFriendRequest(user['id'], name),
+                                              child: const Text('Add', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w500)),
+                                            ),
+                                        ],
+                                      ),
+                                    );
                                   },
-                                  activeColor: Theme.of(context).primaryColor,
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    );
-                  },
+                                ))
+                          : FutureBuilder<Map<String, dynamic>>(
+                              future: LocationController.getFriends(),
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState == ConnectionState.waiting) {
+                                  return const Center(child: CircularProgressIndicator());
+                                }
+
+                                if (snapshot.hasError) {
+                                  return Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                                        const SizedBox(height: 16),
+                                        Text('Error loading friends: ${snapshot.error}'),
+                                        const SizedBox(height: 16),
+                                        ElevatedButton(
+                                          onPressed: () {
+                                            setModalState(() {}); // Trigger rebuild to retry
+                                          },
+                                          child: const Text('Retry'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }
+
+                                final friendsList = snapshot.data?['data'] as List<dynamic>? ?? [];
+
+                                if (friendsList.isEmpty) {
+                                  return const Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.people_outline, size: 48, color: Colors.grey),
+                                        SizedBox(height: 16),
+                                        Text('No friends found'),
+                                      ],
+                                    ),
+                                  );
+                                }
+
+                                _allFriends = List<Map<String, dynamic>>.from(friendsList);
+
+                                return Column(
+                                  children: [
+                                    // Select All/None buttons
+                                    if (_allFriends.isNotEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.only(bottom: 8.0),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                          children: [
+                                            TextButton.icon(
+                                              onPressed: () {
+                                                setModalState(() {
+                                                  setState(() {
+                                                    _selectedFriendIds.clear();
+                                                    for (final friend in _allFriends) {
+                                                      final friendId = _parseFriendId(friend['id']);
+                                                      if (friendId != null) {
+                                                        _selectedFriendIds.add(friendId);
+                                                      }
+                                                    }
+                                                  });
+                                                });
+                                              },
+                                              icon: const Icon(Icons.select_all),
+                                              label: const Text('Select All'),
+                                            ),
+                                            TextButton.icon(
+                                              onPressed: () {
+                                                setModalState(() {
+                                                  setState(() {
+                                                    _selectedFriendIds.clear();
+                                                  });
+                                                });
+                                              },
+                                              icon: const Icon(Icons.clear_all),
+                                              label: const Text('Clear All'),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    // Friend List
+                                    Expanded(
+                                      child: ListView.builder(
+                                        itemCount: _allFriends.length,
+                                        itemBuilder: (context, index) {
+                                          final friend = _allFriends[index];
+                                          final friendId = _parseFriendId(friend['id']);
+
+                                          if (friendId == null) {
+                                            return const SizedBox.shrink();
+                                          }
+
+                                          final firstName = friend['first_name']?.toString() ?? '';
+                                          final lastName = friend['last_name']?.toString() ?? '';
+                                          final fullName = '$firstName $lastName'.trim();
+                                          final avatarUrl = friend['avatar_url']?.toString();
+                                          final isSelected = _selectedFriendIds.contains(friendId);
+
+                                          return Container(
+                                            margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                                            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius: BorderRadius.circular(12),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.grey.withOpacity(0.05),
+                                                  blurRadius: 2,
+                                                  offset: const Offset(0, 1),
+                                                ),
+                                              ],
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                CircleAvatar(
+                                                  radius: 24,
+                                                  backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
+                                                      ? NetworkImage(avatarUrl)
+                                                      : null,
+                                                  child: (avatarUrl == null || avatarUrl.isEmpty)
+                                                      ? const Icon(Icons.person, size: 28)
+                                                      : null,
+                                                ),
+                                                const SizedBox(width: 12),
+                                                Expanded(
+                                                  child: Text(
+                                                    fullName,
+                                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                                  ),
+                                                ),
+                                                Checkbox(
+                                                  value: isSelected,
+                                                  onChanged: (bool? selected) {
+                                                    setModalState(() {
+                                                      setState(() {
+                                                        if (selected == true) {
+                                                          _selectedFriendIds.add(friendId);
+                                                        } else {
+                                                          _selectedFriendIds.remove(friendId);
+                                                        }
+                                                      });
+                                                    });
+                                                  },
+                                                  activeColor: Theme.of(context).primaryColor,
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                    ),
+                  ],
                 ),
               ),
               actions: [

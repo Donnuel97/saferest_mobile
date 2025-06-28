@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Saferest Mobile</string>
+	<string>Saferest</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -24,6 +24,18 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app needs access to location when open to track your trips.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>This app needs access to location when in the background to track your trips.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>This app needs access to location when open and in the background to track your trips.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+		<string>location</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
@@ -41,13 +53,40 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<false/>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>SafeRest needs access to location to provide accurate trip information and safety features.</string>
-	<key>NSLocationAlwaysUsageDescription</key>
-	<string>SafeRest needs access to location to provide accurate trip information and safety features.</string>
+	<key>NSUserNotificationUsageDescription</key>
+	<string>We need to send you notifications about friend requests and trip updates.</string>
+	<!-- Biometric/Face ID Permission -->
+	<key>NSFaceIDUsageDescription</key>
+	<string>This app requires access to biometric authentication to secure your data.</string>
+
+	<!-- Camera Permission -->
+	<key>NSCameraUsageDescription</key>
+	<string>This app requires access to the camera for capturing photos.</string>
+
+	<!-- Microphone Permission -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app requires access to the microphone for audio recording.</string>
+
+	<!-- Photo Library Permissions -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app requires access to the photo library to save and upload photos.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>This app requires access to save photos to your library.</string>
+
+	<!-- Bluetooth Permission -->
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>This app requires access to Bluetooth for connectivity features.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>This app requires access to Bluetooth for device connectivity.</string>
+
+	<!-- Local Network Usage -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>This app requires access to the local network for connectivity features.</string>
 </dict>
 </plist>

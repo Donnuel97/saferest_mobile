@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "561047411288",
+    "project_id": "saferest-mobile",
+    "storage_bucket": "saferest-mobile.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:561047411288:android:82ad5f85466f07cf4d882d",
+        "android_client_info": {
+          "package_name": "com.example.saferest_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBeK8U_EWMU0NKc_I7oGAeoOLT2GUhqJ-Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

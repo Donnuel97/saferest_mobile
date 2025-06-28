@@ -11,6 +11,7 @@ class LoginController {
   static const Duration retryDelay = Duration(seconds: 2);
 
   /// 🔐 Login Method
+  /// 🔐 Login Method
   static Future<Map<String, dynamic>> loginUser(String email, String password) async {
     String message = '';
     bool success = false;
@@ -43,9 +44,19 @@ class LoginController {
           }
         }
 
-        // Handle other errors
+        // Handle other errors (check for error status OR missing required fields)
         if (response['status'] == 'error') {
           message = response['message'] ?? 'Login failed';
+          if (response['statusCode'] == 401) {
+            message = 'Invalid email or password';
+          }
+          return {"success": false, "message": message};
+        }
+
+        // Check if this is an error response by looking for missing success fields
+        if (!response.containsKey('access') || !response.containsKey('user_id')) {
+          // This might be an error response without 'status' field
+          message = response['message'] ?? response['detail'] ?? 'Login failed';
           if (response['statusCode'] == 401) {
             message = 'Invalid email or password';
           }
@@ -67,9 +78,12 @@ class LoginController {
             "first_name": response["first_name"],
             "last_name": response["last_name"],
             "role": response["role"],
+            "account_status": response["account_status"],
           };
           await prefs.setString('userData', json.encode(user));
-          break; // Exit the retry loop on success
+
+          // Return the response data directly (it already contains what the UI needs)
+          return response;
         } else {
           message = "Invalid server response";
           debugPrint("❌ Invalid server response structure: $response");
